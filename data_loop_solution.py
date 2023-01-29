@@ -1,28 +1,31 @@
 import dtlpy as dl
-
+from datetime import timezone
+import datetime
 #My dataloop Credentilas
 email='narsi.electrical999@gmail.com'
 password = ''
 
-def run_the_dataloop():
+def run_the_dataloop(project_name: str, dataset_name: str):
     #Login method
     if dl.token_expired():
         #dl.login()
         dl.login_m2m(email=email, password=password)
         # Get the project
 
-    #project = dl.projects.create(project_name='Sports Events') #create your project
+    try:
+        project = dl.projects.create(project_name=project_name) #create your project
+    except:
+        project = dl.projects.get(project_name=project_name)
 
-    project = dl.projects.get(project_name='Sports Events')
     # Get the dataset
-    #dataset = project.datasets.get(dataset_name='My Fitst testing')
     # Get items in pages (100 item per page)
 
     #Creating a New DataSet
-    data_set = project.datasets.create(dataset_name='My-Testing-Dataset')
-
-    #gettign the created dataset
-    dataset = project.datasets.get(dataset_name='My-Testing-Dataset')
+    try:
+        data_set = project.datasets.create(dataset_name=dataset_name)
+    except:
+        #getting the created dataset
+        dataset = project.datasets.get(dataset_name=dataset_name)
 
     #creating the Labesl
     labels = [
@@ -35,33 +38,57 @@ def run_the_dataloop():
     dataset.add_labels(label_list=labels)
 
     #Createting the Recipe with labels
-    recipe = dataset.recipes.create(recipe_name='My-Testing-Recipe', labels=labels)
+    try:
+        recipe = dataset.recipes.create(recipe_name='My-Testing-Recipe', labels=labels)
+    except Exception as exe:
+        print('recipe name already existing {0}'.format(str(exe)))
+
 
     #Uploading the Data
-    dataset.items.upload(local_path='D:/Projects_DA/Testing') #Chnage your path here
+    uploaded_items = dataset.items.upload(local_path='D:/Projects_DA/Testing') #Change your path here
 
+    #Adding utc time to the Metadata
+    utc_time = datetime.datetime.now(timezone.utc).isoformat()
+
+    #method I to update the Metadata of the
     #Filtering the  uploaded items
-    filters = dl.Filters()
-    filters.add(field='dir', values='/Testing')
+    #filters = dl.Filters()
+    #filters.add(field='dir', values='/Testing')
+    #dataset.items.update(filters=filters, update_values={'user': {'dateTime': utc_time}})
 
-    item_list = dataset.items.list(filters=filters)
+    #method2:  one at a time
 
-    #adding a labels to the Filetered items
-    for items in item_list:
-        for count, item in enumerate(items):
-            if count < 2:
-                builder = item.annotations.builder()
-                builder.add(annotation_definition=dl.Classification(label='Class1'))
-                item.annotations.upload(builder)
-            else:
-                builder = item.annotations.builder()
-                builder.add(annotation_definition=dl.Classification(label='Class2'))
-                item.annotations.upload(builder)
+    # for item in uploaded_items:
+    #     item.metadata['user'] = dict()
+    #     item.metadata['user']['datetime'] = utc_time
+    #     # update and reclaim item
+    #     item = item.update()
 
-    # Filtering the Class1 labelled items
-    class1_filter = dl.Filters(resource='annotations', field='label', values='Class1')
+    # method 2 ends here
 
+    for count, item in enumerate(uploaded_items):
+        if count < 2:
+              label_name = 'Class1'
+        else:
+              label_name = 'Class2'
+        item.label = label_name # clasifying the item
+        item.metadata['user'] = dict()
+        item.metadata['user']['datetime'] = utc_time  # Adding meta Data Field
+        item.update()
+        builder = item.annotations.builder() # ading the aanotations to item
+        builder.add(annotation_definition=dl.Classification(label=label_name))
+        item.annotations.upload(builder)
+
+    # Query to filter the Class1 labeled items
+    class_filter = dl.Filters()
+    class1_filter = class_filter.add(field='label', values='Class1')
     item_Class1 = dataset.items.list(filters=class1_filter)
+
+    # class_filter = dl.Filters(resource=dl.FILTERS_RESOURCE_ITEM)
+    # class1_filter = person_filter.add(field='label', values='Class1')
+    # #dataset.add_label(label_name='Class1')
+    # pages = dataset.items.list(filters=class1_filter)
+
     # Count the items
 
     # Getting the All point Annotations Datasets
@@ -71,5 +98,6 @@ def run_the_dataloop():
 
 
 if __name__ == '__main__':
-    run_the_dataloop()
-
+    project_name = 'Sports Events'
+    dataset_name = 'My-Testing-Dataset'
+    run_the_dataloop(project_name, dataset_name)
