@@ -95,7 +95,7 @@ def run_the_dataloop(project_name: str, dataset_name: str, random_points=[]):
         item_cls1.print()
 
     # Getting the All point Annotations of Datasets second filter
-    annotations = dataset.annotations.list(filters=dl.Filters(resource=dl.FiltersResource.ANNOTATION).add(field='label', values=['Class1','Class2','Key']))
+    annotations = dataset.annotations.list(filters=dl.Filters(resource=dl.FiltersResource.ANNOTATION).add(field='type', value='point'))
     #annotations =  dataset.annotations.list()
     for annotation in annotations:
         annotation.print()
